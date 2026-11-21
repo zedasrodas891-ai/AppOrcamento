@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Orçamento SINAPI</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 24px;
+        background: #f5f6fa;
+        color: #222;
+      }
+      .container {
+        max-width: 1100px;
+        margin: auto;
+        background: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+      }
+      .filtros {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 16px;
+      }
+      input,
+      select,
+      button {
+        padding: 8px 12px;
+        font-size: 14px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+      input {
+        flex: 1;
+      }
+      button {
+        cursor: pointer;
+        background: #1e6bd6;
+        color: #fff;
+        border: none;
+      }
+      button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+      button.secundario {
+        background: #6c757d;
+      }
+      button.sucesso {
+        background: #198754;
+      }
+      button.perigo {
+        background: #dc3545;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+      }
+      th,
+      td {
+        padding: 10px;
+        border-bottom: 1px solid #e5e5e5;
+        text-align: left;
+        font-size: 14px;
+      }
+      th {
+        background: #f0f2f5;
+      }
+      tr:hover {
+        background: #f8faff;
+      }
+      .rodape {
+        margin-top: 12px;
+        font-size: 13px;
+        color: #555;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .paginacao {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+        margin-top: 14px;
+      }
+      .btn-pagina {
+        background: #e9ecef;
+        color: #222;
+        padding: 6px 11px;
+        font-size: 13px;
+      }
+      .btn-pagina.ativa {
+        background: #1e6bd6;
+        color: #fff;
+        font-weight: bold;
+      }
+      .paginacao-reticencias {
+        padding: 0 4px;
+        color: #666;
+      }
+      #painel-avaliacao {
+        display: none;
+        margin-top: 24px;
+        padding: 16px;
+        border: 1px solid #d0d7de;
+        border-radius: 6px;
+        background: #f9fbff;
+      }
+      .painel-topo {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+      .detalhe-linha {
+        margin: 8px 0;
+      }
+      .campo-curto {
+        flex: none;
+        width: 160px;
+        margin-left: 8px;
+      }
+      .bloco-separado {
+        margin-top: 14px;
+        padding-top: 12px;
+        border-top: 1px dashed #cbd5e1;
+      }
+      .secao-orcamento {
+        margin-top: 32px;
+        padding-top: 20px;
+        border-top: 2px solid #e2e8f0;
+      }
+      .resumo-totais {
+        margin-top: 16px;
+        padding: 14px;
+        background: #f0f4f8;
+        border-radius: 6px;
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+        font-size: 15px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>Consulta SINAPI - Insumos</h2>
+
+      <div class="filtros">
+        <input
+          type="text"
+          id="campo-busca"
+          placeholder="Filtrar por código ou descrição..."
+        />
+        <select id="filtro-tipo">
+          <option value="Todos">Todos</option>
+          {% for tipo in tipos %}
+          <option value="{{ tipo }}">{{ tipo }}</option>
+          {% endfor %}
+        </select>
+        <button id="btn-buscar" type="button">Buscar</button>
+        <button id="btn-limpar" class="secundario" type="button">Limpar</button>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Descrição</th>
+            <th>Preço Unitário (R$)</th>
+            <th>Unidade</th>
+            <th>Tipo</th>
+            <th>Ação</th>
+          </tr>
+        </thead>
+        <tbody id="tabela-insumos"></tbody>
+      </table>
+
+      <div class="rodape">
+        <span id="status-resultados">Carregando...</span>
+      </div>
+
+      <div id="paginacao" class="paginacao"></div>
+
+      <!-- Painel de Avaliação e Parametrização -->
+      <div id="painel-avaliacao">
+        <div class="painel-topo">
+          <h3 style="margin: 0">Avaliação do Insumo</h3>
+          <button id="btn-fechar-avaliacao" class="secundario" type="button">
+            Fechar
+          </button>
+        </div>
+
+        <p class="detalhe-linha">
+          <strong>Código:</strong> <span id="av-codigo">-</span>
+        </p>
+        <p class="detalhe-linha">
+          <strong>Descrição:</strong> <span id="av-descricao">-</span>
+        </p>
+        <p class="detalhe-linha">
+          <strong>Tipo:</strong> <span id="av-tipo">-</span>
+        </p>
+        <p class="detalhe-linha">
+          <strong>Unidade:</strong> <span id="av-unidade">-</span>
+        </p>
+
+        <div class="detalhe-linha">
+          <label for="av-valor-unitario">
+            <strong>Valor Unitário Escolhido (R$):</strong>
+          </label>
+          <input
+            type="number"
+            id="av-valor-unitario"
+            class="campo-curto"
+            step="0.01"
+            min="0"
+          />
+          <span id="av-preco-formatado" style="margin-left: 10px; color: #555">
+            R$ 0,00
+          </span>
+        </div>
+
+        <div class="bloco-separado">
+          <strong>Separação Unitária:</strong>
+          <label for="av-perc-mao-obra" style="margin-left: 10px">
+            % Mão de Obra:
+          </label>
+          <input
+            type="number"
+            id="av-perc-mao-obra"
+            class="campo-curto"
+            style="width: 90px"
+            min="0"
+            max="100"
+            step="1"
+            value="0"
+          />
+        </div>
+
+        <p class="detalhe-linha">
+          <strong>Valor Material (unit.):</strong>
+          <span id="av-valor-material">R$ 0,00</span>
+          <span style="margin-left: 16px">
+            <strong>Valor Mão de Obra (unit.):</strong>
+            <span id="av-valor-mao-obra">R$ 0,00</span>
+          </span>
+        </p>
+
+        <div class="bloco-separado">
+          <label for="av-quantitativo">
+            <strong>Quantitativo:</strong>
+          </label>
+          <input
+            type="number"
+            id="av-quantitativo"
+            class="campo-curto"
+            style="width: 120px"
+            min="0"
+            step="0.01"
+            value="1"
+          />
+        </div>
+
+        <p class="detalhe-linha">
+          <strong>Subtotal Material:</strong>
+          <span id="av-sub-material">R$ 0,00</span>
+          <span style="margin-left: 16px">
+            <strong>Subtotal Mão de Obra:</strong>
+            <span id="av-sub-mao-obra">R$ 0,00</span>
+          </span>
+          <span style="margin-left: 16px">
+            <strong>Total do Item:</strong>
+            <span id="av-total-item">R$ 0,00</span>
+          </span>
+        </p>
+
+        <div style="margin-top: 16px">
+          <button id="btn-adicionar-orcamento" class="sucesso" type="button">
+            + Adicionar ao Orçamento
+          </button>
+        </div>
+      </div>
+
+      <!-- Lista de Itens do Orçamento -->
+      <div class="secao-orcamento">
+        <div class="painel-topo">
+          <h3 style="margin: 0">Lista de Itens do Orçamento</h3>
+          <button id="btn-limpar-orcamento" class="perigo" type="button">
+            Limpar Orçamento
+          </button>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Descrição</th>
+              <th>Unid.</th>
+              <th>Qtd.</th>
+              <th>Material (R$)</th>
+              <th>Mão de Obra (R$)</th>
+              <th>Total (R$)</th>
+              <th>Remover</th>
+            </tr>
+          </thead>
+          <tbody id="tabela-orcamento">
+            <tr>
+              <td colspan="8" style="text-align: center; color: #666">
+                Nenhum item adicionado ao orçamento ainda.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="resumo-totais">
+          <div>
+            <strong>Total Material:</strong>
+            <span id="total-geral-material">R$ 0,00</span>
+          </div>
+          <div>
+            <strong>Total Mão de Obra:</strong>
+            <span id="total-geral-mao-obra">R$ 0,00</span>
+          </div>
+          <div>
+            <strong>Total Geral do Orçamento:</strong>
+            <span id="total-geral-orcamento">R$ 0,00</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+  </body>
+</html>
